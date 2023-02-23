@@ -17,6 +17,7 @@ use eframe::egui;
 pub struct Camera {
     pub position: cgmath::Vector2<f32>,
     pub screen_size: cgmath::Vector2<f32>,
+    pub rotation: f32,
     pub scale: f32,
 }
 
@@ -31,6 +32,7 @@ impl App {
         let camera = Camera {
             position: (0.0, 0.0).into(),
             screen_size: (1.0, 1.0).into(),
+            rotation: cgmath::Rad::from(cgmath::Deg(0.0)).0,
             scale: 1.0,
         };
 
@@ -57,7 +59,7 @@ impl eframe::App for App {
         let ts = time.duration_since(self.last_frame_time).as_secs_f32();
         self.last_frame_time = time;
 
-        self.rotation += 90.0 * ts;
+        self.rotation += cgmath::Rad::from(cgmath::Deg(90.0)).0 * ts;
         ctx.request_repaint();
 
         egui::SidePanel::left("Settings").show(ctx, |ui| {
@@ -87,7 +89,7 @@ impl eframe::App for App {
                                         camera,
                                         &[PerObjectData {
                                             object_position: (0.0, 0.0).into(),
-                                            rotation: cgmath::Rad::from(cgmath::Deg(rotation)).0,
+                                            rotation,
                                             scale: (1.0, 1.0).into(),
                                             is_circle: 0,
                                             circle_width: 0.0,

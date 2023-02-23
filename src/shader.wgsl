@@ -21,6 +21,7 @@ struct VertexOutput {
 struct Camera {
     position: vec2<f32>,
     screen_size: vec2<f32>,
+    rotation: f32,
     scale: f32,
 };
 
@@ -44,6 +45,12 @@ fn vs_main(
     );
     out.position += model.object_position;
     out.clip_position = vec4<f32>((out.position - camera.position) * camera.scale / vec2<f32>(aspect, 1.0), 0.0, 1.0);
+    out.clip_position = vec4<f32>(
+        out.clip_position.x * cos(camera.rotation) - out.clip_position.y * sin(camera.rotation),
+        out.clip_position.y * cos(camera.rotation) + out.clip_position.x * sin(camera.rotation),
+        out.clip_position.z,
+        out.clip_position.w,
+    );
     out.tex_coord = model.tex_coord;
     out.color = model.color;
     return out;
