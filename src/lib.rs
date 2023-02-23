@@ -25,6 +25,7 @@ pub struct App {
     camera: Camera,
     last_frame_time: std::time::Instant,
     board: Board,
+    turn: State,
 }
 
 impl App {
@@ -45,46 +46,18 @@ impl App {
             .paint_callback_resources
             .insert(render_state);
 
+        let mut board = Board::default();
+        board
+            .elements
+            .iter_mut()
+            .flatten()
+            .for_each(|e| *e = Element::Board(Box::new(Board::default())));
+
         Self {
             camera,
             last_frame_time: std::time::Instant::now(),
-            board: Board {
-                elements: [
-                    [
-                        Element::Board(Box::new(Board {
-                            elements: [
-                                [
-                                    Element::State(Some(State::Cross)),
-                                    Element::State(Some(State::Cross)),
-                                    Element::State(Some(State::Cross)),
-                                ],
-                                [
-                                    Element::State(Some(State::Cross)),
-                                    Element::State(Some(State::Cross)),
-                                    Element::State(Some(State::Cross)),
-                                ],
-                                [
-                                    Element::State(Some(State::Cross)),
-                                    Element::State(Some(State::Cross)),
-                                    Element::State(Some(State::Cross)),
-                                ],
-                            ],
-                        })),
-                        Element::State(Some(State::Circle)),
-                        Element::State(Some(State::Circle)),
-                    ],
-                    [
-                        Element::State(Some(State::Circle)),
-                        Element::State(Some(State::Circle)),
-                        Element::State(Some(State::Circle)),
-                    ],
-                    [
-                        Element::State(Some(State::Circle)),
-                        Element::State(Some(State::Circle)),
-                        Element::State(Some(State::Circle)),
-                    ],
-                ],
-            },
+            board,
+            turn: State::Cross,
         }
     }
 }
@@ -99,15 +72,18 @@ impl eframe::App for App {
         ctx.request_repaint();
 
         egui::SidePanel::left("Settings").show(ctx, |ui| {
-            ui.label("Put text here");
+            ui.label(format!("Current Turn: {}", self.turn));
             ui.allocate_space(ui.available_size());
         });
 
-        egui::CentralPanel::default()
+        let egui::InnerResponse {
+            inner: (rect, response),
+            response: _,
+        } = egui::CentralPanel::default()
             .frame(egui::Frame::none())
             .show(ctx, |ui| {
                 let size = ui.available_size();
-                let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::click());
+                let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
                 self.camera.screen_size = (size.x, size.y).into();
 
@@ -137,22 +113,44 @@ impl eframe::App for App {
                             }),
                     ),
                 });
+
+                (rect, response)
             });
+
+        if response.clicked() {
+            let click_pos = response.interact_pointer_pos().unwrap();
+            if rect.contains(click_pos) {
+                let ndc_coords = ((click_pos - rect.left_top()) / rect.size() * 2.0
+                    - egui::Vec2::splat(1.0))
+                    * egui::vec2(1.0, -1.0);
+                println!("Click at {}, {}", ndc_coords.x, ndc_coords.y);
+            }
+        }
+
+        if response.hovered() {
+            ctx.input(|i| {
+                if i.scroll_delta.y > 0.0 {
+                    self.camera.scale *= 0.95;
+                } else if i.scroll_delta.y < 0.0 {
+                    self.camera.scale /= 0.95;
+                }
+            });
+        }
 
         if !ctx.wants_keyboard_input() {
             ctx.input(|i| {
                 const CAMERA_SPEED: f32 = 2.0;
                 if i.key_down(egui::Key::W) || i.key_down(egui::Key::ArrowUp) {
-                    self.camera.position.y += CAMERA_SPEED * ts;
+                    self.camera.position.y += CAMERA_SPEED / self.camera.scale * ts;
                 }
                 if i.key_down(egui::Key::S) || i.key_down(egui::Key::ArrowDown) {
-                    self.camera.position.y -= CAMERA_SPEED * ts;
+                    self.camera.position.y -= CAMERA_SPEED / self.camera.scale * ts;
                 }
                 if i.key_down(egui::Key::A) || i.key_down(egui::Key::ArrowLeft) {
-                    self.camera.position.x -= CAMERA_SPEED * ts;
+                    self.camera.position.x -= CAMERA_SPEED / self.camera.scale * ts;
                 }
                 if i.key_down(egui::Key::D) || i.key_down(egui::Key::ArrowRight) {
-                    self.camera.position.x += CAMERA_SPEED * ts;
+                    self.camera.position.x += CAMERA_SPEED / self.camera.scale * ts;
                 }
             });
         }

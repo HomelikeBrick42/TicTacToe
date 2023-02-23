@@ -4,6 +4,15 @@ pub enum State {
     Cross,
 }
 
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            State::Circle => write!(f, "Circle"),
+            State::Cross => write!(f, "Cross"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Element {
     State(Option<State>),
@@ -16,6 +25,12 @@ impl Element {
             &Element::State(state) => state,
             Element::Board(board) => board.get_winner(),
         }
+    }
+}
+
+impl Default for Element {
+    fn default() -> Self {
+        Self::State(None)
     }
 }
 
@@ -99,6 +114,14 @@ impl Board {
             Some(State::Cross)
         } else {
             None
+        }
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self {
+            elements: Default::default(),
         }
     }
 }
