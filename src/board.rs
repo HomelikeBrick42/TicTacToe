@@ -4,7 +4,7 @@ pub enum State {
     Cross,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Element {
     State(Option<State>),
     Board(Box<Board>),
@@ -19,7 +19,7 @@ impl Element {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Board {
     pub elements: [[Element; 3]; 3],
 }
