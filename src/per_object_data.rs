@@ -6,6 +6,7 @@ pub struct PerObjectData {
     pub object_position: cgmath::Vector2<f32>,
     pub rotation: f32,
     pub scale: cgmath::Vector2<f32>,
+    pub color: cgmath::Vector3<f32>,
     pub is_circle: u32,
     pub circle_width: f32,
 }
@@ -32,13 +33,18 @@ impl PerObjectData {
             format: wgpu::VertexFormat::Float32x2,
         },
         wgpu::VertexAttribute {
-            offset: offset_of!(Self, is_circle) as wgpu::BufferAddress,
+            offset: offset_of!(Self, color) as wgpu::BufferAddress,
             shader_location: 3,
+            format: wgpu::VertexFormat::Float32x3,
+        },
+        wgpu::VertexAttribute {
+            offset: offset_of!(Self, is_circle) as wgpu::BufferAddress,
+            shader_location: 4,
             format: wgpu::VertexFormat::Uint32,
         },
         wgpu::VertexAttribute {
             offset: offset_of!(Self, circle_width) as wgpu::BufferAddress,
-            shader_location: 4,
+            shader_location: 5,
             format: wgpu::VertexFormat::Float32,
         },
     ];

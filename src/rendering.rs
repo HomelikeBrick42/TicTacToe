@@ -36,22 +36,18 @@ impl RenderState {
             Vertex {
                 position: (-0.5, 0.5).into(),
                 tex_coord: (0.0, 1.0).into(),
-                color: (1.0, 0.0, 0.0).into(),
             },
             Vertex {
                 position: (0.5, 0.5).into(),
                 tex_coord: (1.0, 1.0).into(),
-                color: (1.0, 0.0, 0.0).into(),
             },
             Vertex {
                 position: (0.5, -0.5).into(),
                 tex_coord: (1.0, 0.0).into(),
-                color: (1.0, 0.0, 0.0).into(),
             },
             Vertex {
                 position: (-0.5, -0.5).into(),
                 tex_coord: (0.0, 0.0).into(),
-                color: (1.0, 0.0, 0.0).into(),
             },
         ];
 

@@ -24,7 +24,7 @@ pub struct Camera {
 pub struct App {
     camera: Camera,
     last_frame_time: std::time::Instant,
-    rotation: f32,
+    board: Board,
 }
 
 impl App {
@@ -33,7 +33,7 @@ impl App {
             position: (0.0, 0.0).into(),
             screen_size: (1.0, 1.0).into(),
             rotation: cgmath::Rad::from(cgmath::Deg(0.0)).0,
-            scale: 1.0,
+            scale: 0.5,
         };
 
         let wgpu_render_state = cc.wgpu_render_state.as_ref().unwrap();
@@ -48,7 +48,43 @@ impl App {
         Self {
             camera,
             last_frame_time: std::time::Instant::now(),
-            rotation: 0.0,
+            board: Board {
+                elements: [
+                    [
+                        Element::Board(Box::new(Board {
+                            elements: [
+                                [
+                                    Element::State(Some(State::Cross)),
+                                    Element::State(Some(State::Cross)),
+                                    Element::State(Some(State::Cross)),
+                                ],
+                                [
+                                    Element::State(Some(State::Cross)),
+                                    Element::State(Some(State::Cross)),
+                                    Element::State(Some(State::Cross)),
+                                ],
+                                [
+                                    Element::State(Some(State::Cross)),
+                                    Element::State(Some(State::Cross)),
+                                    Element::State(Some(State::Cross)),
+                                ],
+                            ],
+                        })),
+                        Element::State(Some(State::Circle)),
+                        Element::State(Some(State::Circle)),
+                    ],
+                    [
+                        Element::State(Some(State::Circle)),
+                        Element::State(Some(State::Circle)),
+                        Element::State(Some(State::Circle)),
+                    ],
+                    [
+                        Element::State(Some(State::Circle)),
+                        Element::State(Some(State::Circle)),
+                        Element::State(Some(State::Circle)),
+                    ],
+                ],
+            },
         }
     }
 }
@@ -59,22 +95,29 @@ impl eframe::App for App {
         let ts = time.duration_since(self.last_frame_time).as_secs_f32();
         self.last_frame_time = time;
 
-        self.rotation += cgmath::Rad::from(cgmath::Deg(90.0)).0 * ts;
+        // maybe not do this all the time? only do it when the camera is moving or smth
         ctx.request_repaint();
 
         egui::SidePanel::left("Settings").show(ctx, |ui| {
-            ui.label("Hello");
+            ui.label("Put text here");
             ui.allocate_space(ui.available_size());
         });
 
         egui::CentralPanel::default()
             .frame(egui::Frame::none())
             .show(ctx, |ui| {
-                // let size = egui::vec2(640.0, 480.0);
                 let size = ui.available_size();
                 let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::click());
 
                 self.camera.screen_size = (size.x, size.y).into();
+
+                let mut per_object_data = vec![];
+                render_board(
+                    &self.board,
+                    (0.0, 0.0).into(),
+                    (1.0, 1.0).into(),
+                    &mut per_object_data,
+                );
 
                 ui.painter().add(egui::PaintCallback {
                     rect,
@@ -82,22 +125,9 @@ impl eframe::App for App {
                         eframe::egui_wgpu::CallbackFn::new()
                             .prepare({
                                 let camera = self.camera;
-                                let rotation = self.rotation;
                                 move |device, queue, encoder, resources| {
                                     let state: &mut RenderState = resources.get_mut().unwrap();
-                                    state.prepare(
-                                        camera,
-                                        &[PerObjectData {
-                                            object_position: (0.0, 0.0).into(),
-                                            rotation,
-                                            scale: (1.0, 1.0).into(),
-                                            is_circle: 0,
-                                            circle_width: 0.0,
-                                        }],
-                                        device,
-                                        queue,
-                                        encoder,
-                                    );
+                                    state.prepare(camera, &per_object_data, device, queue, encoder);
                                     vec![]
                                 }
                             })
@@ -108,5 +138,92 @@ impl eframe::App for App {
                     ),
                 });
             });
+
+        if !ctx.wants_keyboard_input() {
+            ctx.input(|i| {
+                const CAMERA_SPEED: f32 = 2.0;
+                if i.key_down(egui::Key::W) || i.key_down(egui::Key::ArrowUp) {
+                    self.camera.position.y += CAMERA_SPEED * ts;
+                }
+                if i.key_down(egui::Key::S) || i.key_down(egui::Key::ArrowDown) {
+                    self.camera.position.y -= CAMERA_SPEED * ts;
+                }
+                if i.key_down(egui::Key::A) || i.key_down(egui::Key::ArrowLeft) {
+                    self.camera.position.x -= CAMERA_SPEED * ts;
+                }
+                if i.key_down(egui::Key::D) || i.key_down(egui::Key::ArrowRight) {
+                    self.camera.position.x += CAMERA_SPEED * ts;
+                }
+            });
+        }
+    }
+}
+
+fn render_board(
+    board: &Board,
+    position: cgmath::Vector2<f32>,
+    scale: cgmath::Vector2<f32>,
+    per_object_data: &mut Vec<PerObjectData>,
+) {
+    for (x, column) in board.elements.iter().enumerate() {
+        for (y, element) in column.iter().enumerate() {
+            for x in 0..=3 {
+                per_object_data.push(PerObjectData {
+                    object_position: position + cgmath::vec2((x as f32 - 1.5) * scale.x, 0.0),
+                    rotation: cgmath::Rad::from(cgmath::Deg(0.0)).0,
+                    scale: cgmath::vec2(0.05 * scale.x, 3.05 * scale.y),
+                    color: (0.2, 0.2, 0.2).into(),
+                    is_circle: 0,
+                    circle_width: 0.0,
+                });
+            }
+            for y in 0..=3 {
+                per_object_data.push(PerObjectData {
+                    object_position: position + cgmath::vec2(0.0, (y as f32 - 1.5) * scale.y),
+                    rotation: cgmath::Rad::from(cgmath::Deg(0.0)).0,
+                    scale: cgmath::vec2(3.05 * scale.x, 0.05 * scale.y),
+                    color: (0.2, 0.2, 0.2).into(),
+                    is_circle: 0,
+                    circle_width: 0.0,
+                });
+            }
+
+            let position =
+                position + cgmath::vec2((x as f32 - 1.0) * scale.x, (y as f32 - 1.0) * scale.y);
+            match element {
+                Element::State(None) => {} // nothing to render
+                Element::State(Some(State::Circle)) => {
+                    per_object_data.push(PerObjectData {
+                        object_position: position,
+                        rotation: cgmath::Rad::from(cgmath::Deg(0.0)).0,
+                        scale,
+                        color: (0.0, 0.0, 1.0).into(),
+                        is_circle: 1,
+                        circle_width: 0.1,
+                    });
+                }
+                Element::State(Some(State::Cross)) => {
+                    per_object_data.push(PerObjectData {
+                        object_position: position,
+                        rotation: cgmath::Rad::from(cgmath::Deg(45.0)).0,
+                        scale: cgmath::vec2(0.1 * scale.x, scale.y),
+                        color: (1.0, 0.0, 0.0).into(),
+                        is_circle: 0,
+                        circle_width: 0.0,
+                    });
+                    per_object_data.push(PerObjectData {
+                        object_position: position,
+                        rotation: cgmath::Rad::from(cgmath::Deg(-45.0)).0,
+                        scale: cgmath::vec2(0.1 * scale.x, scale.y),
+                        color: (1.0, 0.0, 0.0).into(),
+                        is_circle: 0,
+                        circle_width: 0.0,
+                    });
+                }
+                Element::Board(board) => {
+                    render_board(board, position, scale / 3.0, per_object_data)
+                }
+            }
+        }
     }
 }

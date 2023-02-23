@@ -2,11 +2,11 @@ struct VertexInput {
     @location(0) object_position: vec2<f32>,
     @location(1) rotation: f32,
     @location(2) scale: vec2<f32>,
-    @location(3) is_circle: u32,
-    @location(4) circle_width: f32,
-    @location(5) position: vec2<f32>,
-    @location(6) tex_coord: vec2<f32>,
-    @location(7) color: vec3<f32>,
+    @location(3) color: vec3<f32>,
+    @location(4) is_circle: u32,
+    @location(5) circle_width: f32,
+    @location(6) position: vec2<f32>,
+    @location(7) tex_coord: vec2<f32>,
 };
 
 struct VertexOutput {
