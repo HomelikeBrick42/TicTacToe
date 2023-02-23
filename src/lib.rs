@@ -1,10 +1,12 @@
 mod board;
 mod rendering;
+mod vertex;
 
 use std::sync::Arc;
 
 pub use board::*;
 pub use rendering::*;
+pub use vertex::*;
 
 use eframe::egui;
 
@@ -43,8 +45,8 @@ impl eframe::App for App {
                     callback: Arc::new(
                         eframe::egui_wgpu::CallbackFn::new()
                             .prepare(move |device, queue, encoder, resources| {
-                                let state: &RenderState = resources.get().unwrap();
-                                state.prepare(device, queue, encoder);
+                                let state: &mut RenderState = resources.get_mut().unwrap();
+                                state.prepare(device, queue, encoder, size);
                                 vec![]
                             })
                             .paint(move |info, render_pass, resources| {
