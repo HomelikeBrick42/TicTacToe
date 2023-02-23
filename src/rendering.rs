@@ -1,18 +1,9 @@
-use eframe::egui;
-use encase::{ShaderSize, ShaderType, UniformBuffer};
+use encase::{ShaderSize, UniformBuffer};
 use wgpu::{include_wgsl, util::DeviceExt};
 
-use crate::Vertex;
-
-#[derive(Clone, Copy, ShaderType)]
-pub struct Camera {
-    pub position: cgmath::Vector2<f32>,
-    pub screen_size: cgmath::Vector2<f32>,
-    pub scale: f32,
-}
+use crate::{Camera, Vertex};
 
 pub struct RenderState {
-    pub camera: Camera,
     camera_uniform_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     circle_vertices: wgpu::Buffer,
@@ -139,22 +130,12 @@ impl RenderState {
                     multiview: None,
                 });
 
-        let camera = Camera {
-            position: (0.0, 0.0).into(),
-            screen_size: (1.0, 1.0).into(),
-            scale: 1.0,
-        };
-
         let camera_uniform_buffer = {
-            let mut buffer =
-                UniformBuffer::new([0; <Camera as ShaderSize>::SHADER_SIZE.get() as _]);
-            buffer.write(&camera).unwrap();
-            let buffer = buffer.into_inner();
             wgpu_render_state
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Camera Uniform Buffer"),
-                    contents: &buffer,
+                    contents: &[0; <Camera as ShaderSize>::SHADER_SIZE.get() as _],
                     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
                 })
         };
@@ -172,7 +153,6 @@ impl RenderState {
                 });
 
         Self {
-            camera,
             camera_uniform_buffer,
             camera_bind_group,
             circle_vertices,
@@ -184,24 +164,18 @@ impl RenderState {
 
     pub fn prepare(
         &mut self,
+        camera: Camera,
         _device: &wgpu::Device,
         queue: &wgpu::Queue,
         _encoder: &mut wgpu::CommandEncoder,
-        size: egui::Vec2,
     ) {
-        self.camera.screen_size = (size.x, size.y).into();
-
         let mut buffer = UniformBuffer::new([0; <Camera as ShaderSize>::SHADER_SIZE.get() as _]);
-        buffer.write(&self.camera).unwrap();
+        buffer.write(&camera).unwrap();
         let buffer = buffer.into_inner();
         queue.write_buffer(&self.camera_uniform_buffer, 0, &buffer);
     }
 
-    pub fn render<'a>(
-        &'a self,
-        _info: eframe::epaint::PaintCallbackInfo,
-        render_pass: &mut wgpu::RenderPass<'a>,
-    ) {
+    pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.circle_render_pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.circle_vertices.slice(..));
