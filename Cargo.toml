@@ -1,0 +1,8 @@
+[package]
+name = "ultimate_tic_tac_toe"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = { version = "0.21.3", features = ["wgpu"] }
+wgpu = "0.15.1"
