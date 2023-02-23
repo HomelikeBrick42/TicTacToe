@@ -1,24 +1,38 @@
 use encase::{ShaderSize, UniformBuffer};
 use wgpu::{include_wgsl, util::DeviceExt};
 
-use crate::{Camera, Vertex};
+use crate::{Camera, PerObjectData, Vertex};
 
 pub struct RenderState {
     camera_uniform_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    circle_vertices: wgpu::Buffer,
-    circle_indices: wgpu::Buffer,
-    circle_index_count: usize,
-    circle_render_pipeline: wgpu::RenderPipeline,
+    per_object_vertex_buffer: wgpu::Buffer,
+    per_object_vertex_buffer_count: usize,
+    per_object_vertex_buffer_max_size: usize,
+    vertices: wgpu::Buffer,
+    indices: wgpu::Buffer,
+    index_count: usize,
+    render_pipeline: wgpu::RenderPipeline,
 }
 
 impl RenderState {
     pub fn new(wgpu_render_state: &eframe::egui_wgpu::RenderState) -> Self {
-        let circle_shader = wgpu_render_state
-            .device
-            .create_shader_module(include_wgsl!("./circle_shader.wgsl"));
+        let per_object_vertex_buffer =
+            wgpu_render_state
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Per Object Vertex Buffer"),
+                    contents: &[],
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                });
+        let per_object_vertex_buffer_count = 0;
+        let per_object_vertex_buffer_max_size = 0;
 
-        let circle_vertex_data = [
+        let shader = wgpu_render_state
+            .device
+            .create_shader_module(include_wgsl!("./shader.wgsl"));
+
+        let vertex_data = [
             Vertex {
                 position: (-0.5, 0.5).into(),
                 tex_coord: (0.0, 1.0).into(),
@@ -41,27 +55,27 @@ impl RenderState {
             },
         ];
 
-        let circle_vertices =
+        let vertices =
             wgpu_render_state
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Circle Vertex Buffer"),
-                    contents: bytemuck::cast_slice(&circle_vertex_data),
+                    contents: bytemuck::cast_slice(&vertex_data),
                     usage: wgpu::BufferUsages::VERTEX,
                 });
 
-        let circle_index_data = [0, 1, 2, 0, 2, 3];
+        let index_data = [0, 1, 2, 0, 2, 3];
 
-        let circle_indices =
+        let indices =
             wgpu_render_state
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Circle Index Buffer"),
-                    contents: bytemuck::cast_slice(&circle_index_data),
+                    contents: bytemuck::cast_slice(&index_data),
                     usage: wgpu::BufferUsages::INDEX,
                 });
 
-        let circle_index_count = circle_index_data.len();
+        let index_count = index_data.len();
 
         let camera_bind_group_layout =
             wgpu_render_state
@@ -80,7 +94,7 @@ impl RenderState {
                     }],
                 });
 
-        let circle_render_pipeline_layout =
+        let render_pipeline_layout =
             wgpu_render_state
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -89,19 +103,19 @@ impl RenderState {
                     push_constant_ranges: &[],
                 });
 
-        let circle_render_pipeline =
+        let render_pipeline =
             wgpu_render_state
                 .device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some("Render Pipeline"),
-                    layout: Some(&circle_render_pipeline_layout),
+                    layout: Some(&render_pipeline_layout),
                     vertex: wgpu::VertexState {
-                        module: &circle_shader,
+                        module: &shader,
                         entry_point: "vs_main",
-                        buffers: &[Vertex::layout()],
+                        buffers: &[PerObjectData::layout(), Vertex::layout()],
                     },
                     fragment: Some(wgpu::FragmentState {
-                        module: &circle_shader,
+                        module: &shader,
                         entry_point: "fs_main",
                         targets: &[Some(wgpu::ColorTargetState {
                             format: wgpu_render_state.target_format,
@@ -155,20 +169,44 @@ impl RenderState {
         Self {
             camera_uniform_buffer,
             camera_bind_group,
-            circle_vertices,
-            circle_indices,
-            circle_index_count,
-            circle_render_pipeline,
+            per_object_vertex_buffer,
+            per_object_vertex_buffer_count,
+            per_object_vertex_buffer_max_size,
+            vertices,
+            indices,
+            index_count,
+            render_pipeline,
         }
     }
 
     pub fn prepare(
         &mut self,
         camera: Camera,
-        _device: &wgpu::Device,
+        data: &[PerObjectData],
+        device: &wgpu::Device,
         queue: &wgpu::Queue,
         _encoder: &mut wgpu::CommandEncoder,
     ) {
+        if data.len() * std::mem::size_of::<PerObjectData>()
+            > self.per_object_vertex_buffer_max_size
+        {
+            self.per_object_vertex_buffer_max_size =
+                data.len() * std::mem::size_of::<PerObjectData>();
+            self.per_object_vertex_buffer =
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Per Object Vertex Buffer"),
+                    contents: bytemuck::cast_slice(data),
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                });
+        } else {
+            queue.write_buffer(
+                &self.per_object_vertex_buffer,
+                0,
+                bytemuck::cast_slice(data),
+            );
+        }
+        self.per_object_vertex_buffer_count = data.len();
+
         let mut buffer = UniformBuffer::new([0; <Camera as ShaderSize>::SHADER_SIZE.get() as _]);
         buffer.write(&camera).unwrap();
         let buffer = buffer.into_inner();
@@ -176,10 +214,15 @@ impl RenderState {
     }
 
     pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-        render_pass.set_pipeline(&self.circle_render_pipeline);
+        render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-        render_pass.set_vertex_buffer(0, self.circle_vertices.slice(..));
-        render_pass.set_index_buffer(self.circle_indices.slice(..), wgpu::IndexFormat::Uint32);
-        render_pass.draw_indexed(0..self.circle_index_count as u32, 0, 0..1);
+        render_pass.set_vertex_buffer(0, self.per_object_vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, self.vertices.slice(..));
+        render_pass.set_index_buffer(self.indices.slice(..), wgpu::IndexFormat::Uint32);
+        render_pass.draw_indexed(
+            0..self.index_count as u32,
+            0,
+            0..self.per_object_vertex_buffer_count as u32,
+        );
     }
 }

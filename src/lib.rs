@@ -1,11 +1,13 @@
 mod board;
+mod per_object_data;
 mod rendering;
 mod vertex;
 
+use encase::ShaderType;
 use std::sync::Arc;
 
 pub use board::*;
-use encase::ShaderType;
+pub use per_object_data::*;
 pub use rendering::*;
 pub use vertex::*;
 
@@ -67,7 +69,18 @@ impl eframe::App for App {
                                 let camera = self.camera; // copy the camera so self doesnt get captured
                                 move |device, queue, encoder, resources| {
                                     let state: &mut RenderState = resources.get_mut().unwrap();
-                                    state.prepare(camera, device, queue, encoder);
+                                    state.prepare(
+                                        camera,
+                                        &[PerObjectData {
+                                            object_position: (0.0, 0.0).into(),
+                                            scale: (1.0, 1.0).into(),
+                                            is_circle: 0,
+                                            circle_width: 0.0,
+                                        }],
+                                        device,
+                                        queue,
+                                        encoder,
+                                    );
                                     vec![]
                                 }
                             })

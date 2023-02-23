@@ -8,25 +8,25 @@ pub struct Vertex {
     pub color: cgmath::Vector3<f32>,
 }
 
-// cgmath::Vector3 doesnt implement these traits, but i know its valid
+// cgmath::Vector2 and cgmath::Vector3 doesnt implement these traits, but i know its valid
 unsafe impl bytemuck::Zeroable for Vertex {}
 unsafe impl bytemuck::Pod for Vertex {}
 
 impl Vertex {
     pub const ATTRIBUTES: &[wgpu::VertexAttribute] = &[
         wgpu::VertexAttribute {
-            offset: offset_of!(Vertex, position) as wgpu::BufferAddress,
-            shader_location: 0,
+            offset: offset_of!(Self, position) as wgpu::BufferAddress,
+            shader_location: 4,
             format: wgpu::VertexFormat::Float32x2,
         },
         wgpu::VertexAttribute {
-            offset: offset_of!(Vertex, tex_coord) as wgpu::BufferAddress,
-            shader_location: 1,
+            offset: offset_of!(Self, tex_coord) as wgpu::BufferAddress,
+            shader_location: 5,
             format: wgpu::VertexFormat::Float32x2,
         },
         wgpu::VertexAttribute {
-            offset: offset_of!(Vertex, color) as wgpu::BufferAddress,
-            shader_location: 2,
+            offset: offset_of!(Self, color) as wgpu::BufferAddress,
+            shader_location: 6,
             format: wgpu::VertexFormat::Float32x3,
         },
     ];
