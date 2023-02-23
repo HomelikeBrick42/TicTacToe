@@ -1,11 +1,12 @@
 struct VertexInput {
     @location(0) object_position: vec2<f32>,
-    @location(1) scale: vec2<f32>,
-    @location(2) is_circle: u32,
-    @location(3) circle_width: f32,
-    @location(4) position: vec2<f32>,
-    @location(5) tex_coord: vec2<f32>,
-    @location(6) color: vec3<f32>,
+    @location(1) rotation: f32,
+    @location(2) scale: vec2<f32>,
+    @location(3) is_circle: u32,
+    @location(4) circle_width: f32,
+    @location(5) position: vec2<f32>,
+    @location(6) tex_coord: vec2<f32>,
+    @location(7) color: vec3<f32>,
 };
 
 struct VertexOutput {
@@ -36,7 +37,12 @@ fn vs_main(
     var out: VertexOutput;
     out.is_circle = model.is_circle;
     out.circle_width = model.circle_width;
-    out.position = model.position * model.scale + model.object_position;
+    out.position = model.position * model.scale;
+    out.position = vec2<f32>(
+        out.position.x * cos(-model.rotation) - out.position.y * sin(-model.rotation),
+        out.position.y * cos(-model.rotation) + out.position.x * sin(-model.rotation),
+    );
+    out.position += model.object_position;
     out.clip_position = vec4<f32>((out.position - camera.position) * camera.scale / vec2<f32>(aspect, 1.0), 0.0, 1.0);
     out.tex_coord = model.tex_coord;
     out.color = model.color;

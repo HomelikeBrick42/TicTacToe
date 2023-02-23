@@ -4,6 +4,7 @@ use memoffset::offset_of;
 #[derive(Debug, Clone, Copy)]
 pub struct PerObjectData {
     pub object_position: cgmath::Vector2<f32>,
+    pub rotation: f32,
     pub scale: cgmath::Vector2<f32>,
     pub is_circle: u32,
     pub circle_width: f32,
@@ -21,18 +22,23 @@ impl PerObjectData {
             format: wgpu::VertexFormat::Float32x2,
         },
         wgpu::VertexAttribute {
-            offset: offset_of!(Self, scale) as wgpu::BufferAddress,
+            offset: offset_of!(Self, rotation) as wgpu::BufferAddress,
             shader_location: 1,
+            format: wgpu::VertexFormat::Float32,
+        },
+        wgpu::VertexAttribute {
+            offset: offset_of!(Self, scale) as wgpu::BufferAddress,
+            shader_location: 2,
             format: wgpu::VertexFormat::Float32x2,
         },
         wgpu::VertexAttribute {
             offset: offset_of!(Self, is_circle) as wgpu::BufferAddress,
-            shader_location: 2,
+            shader_location: 3,
             format: wgpu::VertexFormat::Uint32,
         },
         wgpu::VertexAttribute {
             offset: offset_of!(Self, circle_width) as wgpu::BufferAddress,
-            shader_location: 3,
+            shader_location: 4,
             format: wgpu::VertexFormat::Float32,
         },
     ];

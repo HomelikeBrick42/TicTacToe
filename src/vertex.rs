@@ -16,17 +16,17 @@ impl Vertex {
     pub const ATTRIBUTES: &[wgpu::VertexAttribute] = &[
         wgpu::VertexAttribute {
             offset: offset_of!(Self, position) as wgpu::BufferAddress,
-            shader_location: 4,
-            format: wgpu::VertexFormat::Float32x2,
-        },
-        wgpu::VertexAttribute {
-            offset: offset_of!(Self, tex_coord) as wgpu::BufferAddress,
             shader_location: 5,
             format: wgpu::VertexFormat::Float32x2,
         },
         wgpu::VertexAttribute {
-            offset: offset_of!(Self, color) as wgpu::BufferAddress,
+            offset: offset_of!(Self, tex_coord) as wgpu::BufferAddress,
             shader_location: 6,
+            format: wgpu::VertexFormat::Float32x2,
+        },
+        wgpu::VertexAttribute {
+            offset: offset_of!(Self, color) as wgpu::BufferAddress,
+            shader_location: 7,
             format: wgpu::VertexFormat::Float32x3,
         },
     ];

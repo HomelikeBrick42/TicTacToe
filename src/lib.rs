@@ -22,6 +22,8 @@ pub struct Camera {
 
 pub struct App {
     camera: Camera,
+    last_frame_time: std::time::Instant,
+    rotation: f32,
 }
 
 impl App {
@@ -41,12 +43,23 @@ impl App {
             .paint_callback_resources
             .insert(render_state);
 
-        Self { camera }
+        Self {
+            camera,
+            last_frame_time: std::time::Instant::now(),
+            rotation: 0.0,
+        }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let time = std::time::Instant::now();
+        let ts = time.duration_since(self.last_frame_time).as_secs_f32();
+        self.last_frame_time = time;
+
+        self.rotation += 90.0 * ts;
+        ctx.request_repaint();
+
         egui::SidePanel::left("Settings").show(ctx, |ui| {
             ui.label("Hello");
             ui.allocate_space(ui.available_size());
@@ -66,13 +79,15 @@ impl eframe::App for App {
                     callback: Arc::new(
                         eframe::egui_wgpu::CallbackFn::new()
                             .prepare({
-                                let camera = self.camera; // copy the camera so self doesnt get captured
+                                let camera = self.camera;
+                                let rotation = self.rotation;
                                 move |device, queue, encoder, resources| {
                                     let state: &mut RenderState = resources.get_mut().unwrap();
                                     state.prepare(
                                         camera,
                                         &[PerObjectData {
                                             object_position: (0.0, 0.0).into(),
+                                            rotation: cgmath::Rad::from(cgmath::Deg(rotation)).0,
                                             scale: (1.0, 1.0).into(),
                                             is_circle: 0,
                                             circle_width: 0.0,
