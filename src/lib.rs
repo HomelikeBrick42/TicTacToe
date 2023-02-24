@@ -123,7 +123,82 @@ impl eframe::App for App {
                 let ndc_coords = ((click_pos - rect.left_top()) / rect.size() * 2.0
                     - egui::Vec2::splat(1.0))
                     * egui::vec2(1.0, -1.0);
-                println!("Click at {}, {}", ndc_coords.x, ndc_coords.y);
+
+                // inverse of what is being done in vs_main inside of shader.wgsl
+                /*
+                   out.position = model.position * model.scale;
+                   out.position = vec2<f32>(
+                       out.position.x * cos(-model.rotation) - out.position.y * sin(-model.rotation),
+                       out.position.y * cos(-model.rotation) + out.position.x * sin(-model.rotation),
+                   );
+                   out.position += model.object_position;
+                   out.clip_position = vec4<f32>((out.position - camera.position) * camera.scale / vec2<f32>(aspect, 1.0), 0.0, 1.0);
+                   out.clip_position = vec4<f32>(
+                       out.clip_position.x * cos(camera.rotation) - out.clip_position.y * sin(camera.rotation),
+                       out.clip_position.y * cos(camera.rotation) + out.clip_position.x * sin(camera.rotation),
+                       out.clip_position.z,
+                       out.clip_position.w,
+                   );
+                */
+
+                let unrotated_camera = cgmath::vec2(
+                    ndc_coords.x * (-self.camera.rotation).cos()
+                        - ndc_coords.y * (-self.camera.rotation).sin(),
+                    ndc_coords.y * (-self.camera.rotation).cos()
+                        + ndc_coords.x * (-self.camera.rotation).sin(),
+                );
+
+                let aspect = rect.width() / rect.height();
+
+                let position = cgmath::vec2(unrotated_camera.x * aspect, unrotated_camera.y)
+                    / self.camera.scale
+                    + self.camera.position;
+
+                fn get_colliding_state(
+                    board: &mut Board,
+                    cursor_position: cgmath::Vector2<f32>,
+                    position: cgmath::Vector2<f32>,
+                    scale: cgmath::Vector2<f32>,
+                ) -> Option<&mut Option<State>> {
+                    for (x, column) in board.elements.iter_mut().enumerate() {
+                        for (y, element) in column.iter_mut().enumerate() {
+                            let position: egui::Pos2 = Into::<(f32, f32)>::into(
+                                position
+                                    + cgmath::vec2(
+                                        (x as f32 - 1.0) * scale.x,
+                                        (y as f32 - 1.0) * scale.y,
+                                    ),
+                            )
+                            .into();
+                            let rect = egui::Rect {
+                                min: position - egui::vec2(scale.x * 0.5, scale.y * 0.5),
+                                max: position + egui::vec2(scale.x * 0.5, scale.y * 0.5),
+                            };
+
+                            if rect.contains((cursor_position.x, cursor_position.y).into()) {
+                                return match element {
+                                    Element::State(state) => Some(state),
+                                    Element::Board(board) => get_colliding_state(
+                                        board,
+                                        cursor_position,
+                                        (position.x, position.y).into(),
+                                        scale / 3.0,
+                                    ),
+                                };
+                            }
+                        }
+                    }
+                    None
+                }
+
+                if let Some(state @ None) = get_colliding_state(
+                    &mut self.board,
+                    position,
+                    (0.0, 0.0).into(),
+                    (1.0, 1.0).into(),
+                ) {
+                    *state = Some(self.turn);
+                }
             }
         }
 
