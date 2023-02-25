@@ -92,6 +92,24 @@ impl eframe::App for App {
         egui::SidePanel::left("Settings").show(ctx, |ui| {
             ui.label(format!("Current Turn: {}", self.turn));
             ui.label(format!("Number of moves: {}", self.num_moves));
+
+            fn count_num_moves_left(board: &Board) -> usize {
+                board
+                    .elements
+                    .iter()
+                    .flatten()
+                    .map(|element| match element {
+                        Element::State(None) => 1,
+                        Element::State(Some(_)) => 0,
+                        Element::Board(board) => count_num_moves_left(board),
+                    })
+                    .sum()
+            }
+
+            ui.label(format!(
+                "Number of possible moves left: {}",
+                count_num_moves_left(&self.board)
+            ));
             ui.label(format!("Number of layers: {}", self.num_layers));
             ui.horizontal(|ui| {
                 if ui.button("Add Layer").clicked() {
@@ -109,22 +127,24 @@ impl eframe::App for App {
         });
 
         let was_game_over = self.game_over;
-        self.game_over = egui::Window::new("Game Over")
+        if egui::Window::new("Game Over")
             .open(&mut self.game_over)
             .show(ctx, |ui| {
                 if let Some(winner) = self.board.get_winner() {
                     ui.label(format!("{winner} won the game!"));
+                    false
                 } else if self.board.is_stalemate() {
                     ui.label("A stalemate has occured, nobody wins");
+                    false
                 } else {
-                    return false;
+                    true
                 }
-                true
             })
             .map(|r| r.inner)
             .flatten()
-            .unwrap_or(self.game_over);
-        if was_game_over && !self.game_over {
+            .unwrap_or(false)
+            || (was_game_over && !self.game_over)
+        {
             self.restart();
         }
 
