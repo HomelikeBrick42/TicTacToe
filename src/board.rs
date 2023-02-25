@@ -43,7 +43,7 @@ impl Board {
     pub fn is_stalemate(&self) -> bool {
         self.elements.iter().flatten().all(|state| match state {
             Element::State(state) => state.is_some(),
-            Element::Board(board) => board.is_stalemate(),
+            Element::Board(board) => board.is_stalemate() || board.get_winner().is_some(),
         }) && self.get_winner().is_none()
     }
 
