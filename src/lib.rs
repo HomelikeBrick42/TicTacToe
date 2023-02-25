@@ -109,7 +109,7 @@ impl eframe::App for App {
         });
 
         let was_game_over = self.game_over;
-        egui::Window::new("Game Over")
+        self.game_over = egui::Window::new("Game Over")
             .open(&mut self.game_over)
             .show(ctx, |ui| {
                 if let Some(winner) = self.board.get_winner() {
@@ -117,9 +117,13 @@ impl eframe::App for App {
                 } else if self.board.is_stalemate() {
                     ui.label("A stalemate has occured, nobody wins");
                 } else {
-                    unreachable!()
+                    return false;
                 }
-            });
+                true
+            })
+            .map(|r| r.inner)
+            .flatten()
+            .unwrap_or(self.game_over);
         if was_game_over && !self.game_over {
             self.restart();
         }
