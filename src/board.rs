@@ -95,7 +95,7 @@ impl Board {
             {
                 let mut won = true;
                 for i in 0..3 {
-                    if states[2 - i][2 - i] != Some(state) {
+                    if states[2 - i][i] != Some(state) {
                         won = false;
                         break;
                     }

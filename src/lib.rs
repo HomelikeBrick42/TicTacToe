@@ -26,6 +26,7 @@ pub struct App {
     last_frame_time: std::time::Instant,
     board: Board,
     turn: State,
+    game_over: bool,
 }
 
 impl App {
@@ -58,6 +59,7 @@ impl App {
             last_frame_time: std::time::Instant::now(),
             board,
             turn: State::Cross,
+            game_over: false,
         }
     }
 }
@@ -75,6 +77,27 @@ impl eframe::App for App {
             ui.label(format!("Current Turn: {}", self.turn));
             ui.allocate_space(ui.available_size());
         });
+
+        let was_game_over = self.game_over;
+        egui::Window::new("Game Over")
+            .open(&mut self.game_over)
+            .show(ctx, |ui| {
+                if let Some(winner) = self.board.get_winner() {
+                    ui.label(format!("{winner} won the game!"));
+                } else if self.board.is_stalemate() {
+                    ui.label("A stalemate has occured, nobody wins");
+                } else {
+                    unreachable!()
+                }
+            });
+        if was_game_over && !self.game_over {
+            self.board = Board::default();
+            self.board
+                .elements
+                .iter_mut()
+                .flatten()
+                .for_each(|e| *e = Element::Board(Box::new(Board::default())));
+        }
 
         let egui::InnerResponse {
             inner: (rect, response),
@@ -117,7 +140,7 @@ impl eframe::App for App {
                 (rect, response)
             });
 
-        if response.clicked() {
+        if response.clicked() && !self.game_over {
             let click_pos = response.interact_pointer_pos().unwrap();
             if rect.contains(click_pos) {
                 let ndc_coords = ((click_pos - rect.left_top()) / rect.size() * 2.0
@@ -198,6 +221,31 @@ impl eframe::App for App {
                     (1.0, 1.0).into(),
                 ) {
                     *state = Some(self.turn);
+
+                    fn collapse_states(board: &mut Board) {
+                        for element in board.elements.iter_mut().flatten() {
+                            match element {
+                                Element::State(_) => {}
+                                Element::Board(board) => {
+                                    if let Some(winner) = board.get_winner() {
+                                        *element = Element::State(Some(winner));
+                                    } else {
+                                        collapse_states(board);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    collapse_states(&mut self.board);
+
+                    if self.board.get_winner().is_some() || self.board.is_stalemate() {
+                        self.game_over = true;
+                    }
+
+                    self.turn = match self.turn {
+                        State::Circle => State::Cross,
+                        State::Cross => State::Circle,
+                    };
                 }
             }
         }
