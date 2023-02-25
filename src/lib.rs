@@ -27,6 +27,8 @@ pub struct App {
     board: Board,
     turn: State,
     game_over: bool,
+    num_layers: usize,
+    num_moves: usize,
 }
 
 impl App {
@@ -47,20 +49,34 @@ impl App {
             .paint_callback_resources
             .insert(render_state);
 
-        let mut board = Board::default();
-        board
-            .elements
-            .iter_mut()
-            .flatten()
-            .for_each(|e| *e = Element::Board(Box::new(Board::default())));
-
-        Self {
+        let mut app = Self {
             camera,
             last_frame_time: std::time::Instant::now(),
-            board,
+            board: Board::default(),
             turn: State::Cross,
             game_over: false,
+            num_layers: 2,
+            num_moves: 0,
+        };
+        app.restart();
+        app
+    }
+
+    fn restart(&mut self) {
+        self.board = Self::new_board(self.num_layers);
+        self.num_moves = 0;
+    }
+
+    fn new_board(num_layers: usize) -> Board {
+        assert!(num_layers > 0);
+        let mut board = Board::default();
+        if num_layers > 1 {
+            board.elements.iter_mut().flatten().for_each(|e| {
+                let board = Self::new_board(num_layers - 1);
+                *e = Element::Board(Box::new(board));
+            });
         }
+        board
     }
 }
 
@@ -75,6 +91,20 @@ impl eframe::App for App {
 
         egui::SidePanel::left("Settings").show(ctx, |ui| {
             ui.label(format!("Current Turn: {}", self.turn));
+            ui.label(format!("Number of moves: {}", self.num_moves));
+            ui.label(format!("Number of layers: {}", self.num_layers));
+            ui.horizontal(|ui| {
+                if ui.button("Add Layer").clicked() {
+                    self.num_layers += 1;
+                    self.restart();
+                }
+                if ui.button("Remove Layer").clicked() {
+                    if self.num_layers > 1 {
+                        self.num_layers -= 1;
+                        self.restart();
+                    }
+                }
+            });
             ui.allocate_space(ui.available_size());
         });
 
@@ -91,12 +121,7 @@ impl eframe::App for App {
                 }
             });
         if was_game_over && !self.game_over {
-            self.board = Board::default();
-            self.board
-                .elements
-                .iter_mut()
-                .flatten()
-                .for_each(|e| *e = Element::Board(Box::new(Board::default())));
+            self.restart();
         }
 
         let egui::InnerResponse {
@@ -241,6 +266,8 @@ impl eframe::App for App {
                     if self.board.get_winner().is_some() || self.board.is_stalemate() {
                         self.game_over = true;
                     }
+
+                    self.num_moves += 1;
 
                     self.turn = match self.turn {
                         State::Circle => State::Cross,
