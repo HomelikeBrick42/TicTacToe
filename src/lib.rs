@@ -29,6 +29,7 @@ pub struct App {
     game_over: bool,
     num_layers: usize,
     num_moves: usize,
+    num_moves_left: usize,
 }
 
 impl App {
@@ -57,6 +58,7 @@ impl App {
             game_over: false,
             num_layers: 2,
             num_moves: 0,
+            num_moves_left: 0,
         };
         app.restart();
         app
@@ -65,6 +67,20 @@ impl App {
     fn restart(&mut self) {
         self.board = Self::new_board(self.num_layers);
         self.num_moves = 0;
+        self.num_moves_left = Self::count_num_moves_left(&self.board);
+    }
+
+    fn count_num_moves_left(board: &Board) -> usize {
+        board
+            .elements
+            .iter()
+            .flatten()
+            .map(|element| match element {
+                Element::State(None) => 1,
+                Element::State(Some(_)) => 0,
+                Element::Board(board) => Self::count_num_moves_left(board),
+            })
+            .sum()
     }
 
     fn new_board(num_layers: usize) -> Board {
@@ -92,23 +108,9 @@ impl eframe::App for App {
         egui::SidePanel::left("Settings").show(ctx, |ui| {
             ui.label(format!("Current Turn: {}", self.turn));
             ui.label(format!("Number of moves: {}", self.num_moves));
-
-            fn count_num_moves_left(board: &Board) -> usize {
-                board
-                    .elements
-                    .iter()
-                    .flatten()
-                    .map(|element| match element {
-                        Element::State(None) => 1,
-                        Element::State(Some(_)) => 0,
-                        Element::Board(board) => count_num_moves_left(board),
-                    })
-                    .sum()
-            }
-
             ui.label(format!(
                 "Number of possible moves left: {}",
-                count_num_moves_left(&self.board)
+                self.num_moves_left
             ));
             ui.label(format!("Number of layers: {}", self.num_layers));
             ui.horizontal(|ui| {
@@ -292,6 +294,7 @@ impl eframe::App for App {
                     }
 
                     self.num_moves += 1;
+                    self.num_moves_left = Self::count_num_moves_left(&self.board);
 
                     self.turn = match self.turn {
                         State::Circle => State::Cross,
