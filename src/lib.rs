@@ -125,6 +125,9 @@ impl eframe::App for App {
                     }
                 }
             });
+            if ui.button("Reset").clicked() {
+                self.restart();
+            }
             ui.allocate_space(ui.available_size());
         });
 
