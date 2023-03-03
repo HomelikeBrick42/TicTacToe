@@ -43,7 +43,7 @@ impl App {
 
         let wgpu_render_state = cc.wgpu_render_state.as_ref().unwrap();
 
-        let render_state = RenderState::new(&wgpu_render_state);
+        let render_state = RenderState::new(wgpu_render_state);
         wgpu_render_state
             .renderer
             .write()
@@ -54,7 +54,7 @@ impl App {
             camera,
             last_frame_time: std::time::Instant::now(),
             board: Board::default(),
-            turn: State::Cross,
+            turn: State::Circle,
             game_over: false,
             num_layers: 2,
             num_moves: 0,
@@ -65,6 +65,7 @@ impl App {
     }
 
     fn restart(&mut self) {
+        self.turn = State::Circle;
         self.board = Self::new_board(self.num_layers);
         self.num_moves = 0;
         self.num_moves_left = Self::count_num_moves_left(&self.board);
@@ -118,11 +119,9 @@ impl eframe::App for App {
                     self.num_layers += 1;
                     self.restart();
                 }
-                if ui.button("Remove Layer").clicked() {
-                    if self.num_layers > 1 {
-                        self.num_layers -= 1;
-                        self.restart();
-                    }
+                if ui.button("Remove Layer").clicked() && self.num_layers > 1 {
+                    self.num_layers -= 1;
+                    self.restart();
                 }
             });
             if ui.button("Reset").clicked() {
@@ -145,8 +144,7 @@ impl eframe::App for App {
                     true
                 }
             })
-            .map(|r| r.inner)
-            .flatten()
+            .and_then(|r| r.inner)
             .unwrap_or(false)
             || (was_game_over && !self.game_over)
         {

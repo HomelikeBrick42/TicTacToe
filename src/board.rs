@@ -34,7 +34,7 @@ impl Default for Element {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Board {
     pub elements: [[Element; 3]; 3],
 }
@@ -48,12 +48,8 @@ impl Board {
     }
 
     pub fn get_winner(&self) -> Option<State> {
-        let states: [[Option<State>; 3]; 3] = std::array::from_fn(|x| {
-            std::array::from_fn(|y| {
-                let state = self.elements[x][y].get_state();
-                state
-            })
-        });
+        let states: [[Option<State>; 3]; 3] =
+            std::array::from_fn(|x| std::array::from_fn(|y| self.elements[x][y].get_state()));
 
         fn check_winner(state: State, states: &[[Option<State>; 3]; 3]) -> bool {
             // Check vertical
@@ -66,6 +62,7 @@ impl Board {
             // Check horizontal
             for y in 0..3 {
                 let mut won = true;
+                #[allow(clippy::needless_range_loop)]
                 for x in 0..3 {
                     if states[x][y] != Some(state) {
                         won = false;
@@ -80,6 +77,7 @@ impl Board {
             // Check diagonal right
             {
                 let mut won = true;
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..3 {
                     if states[i][i] != Some(state) {
                         won = false;
@@ -105,7 +103,7 @@ impl Board {
                 }
             }
 
-            return false;
+            false
         }
 
         if check_winner(State::Circle, &states) {
@@ -114,14 +112,6 @@ impl Board {
             Some(State::Cross)
         } else {
             None
-        }
-    }
-}
-
-impl Default for Board {
-    fn default() -> Self {
-        Self {
-            elements: Default::default(),
         }
     }
 }

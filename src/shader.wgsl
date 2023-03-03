@@ -33,7 +33,7 @@ var<uniform> camera: Camera;
 fn vs_main(
     model: VertexInput,
 ) -> VertexOutput {
-    let aspect = f32(camera.screen_size.x) / f32(camera.screen_size.y);
+    let aspect = camera.screen_size.x / camera.screen_size.y;
 
     var out: VertexOutput;
     out.is_circle = model.is_circle;
@@ -60,7 +60,7 @@ fn vs_main(
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.tex_coord * 2.0 - 1.0;
 
-    if (in.is_circle != 0u && abs(length(uv) - (1.0 - in.circle_width * 2.0)) > in.circle_width) {
+    if in.is_circle != 0u && abs(length(uv) - (1.0 - in.circle_width * 2.0)) > in.circle_width {
         discard;
     }
 
