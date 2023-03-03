@@ -1,3 +1,5 @@
+#![deny(elided_lifetimes_in_paths)]
+
 mod board;
 mod per_object_data;
 mod rendering;
@@ -33,7 +35,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(cc: &eframe::CreationContext) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let camera = Camera {
             position: (0.0, 0.0).into(),
             screen_size: (1.0, 1.0).into(),
