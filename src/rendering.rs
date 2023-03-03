@@ -1,5 +1,5 @@
+use eframe::wgpu::{self, include_wgsl, util::DeviceExt};
 use encase::{ShaderSize, UniformBuffer};
-use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{Camera, PerObjectData, Vertex};
 

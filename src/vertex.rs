@@ -1,3 +1,4 @@
+use eframe::wgpu;
 use memoffset::offset_of;
 
 #[repr(C, packed)]
